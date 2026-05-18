@@ -26,7 +26,7 @@ class AuthController extends Controller
 
         $user = User::where('email', $request->email)->firstOrFail();
         
-        // Buat token Sanctum [cite: 62]
+        
         $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([
