@@ -17,8 +17,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('services', ServiceController::class);
     Route::apiResource('customers', CustomerController::class);
 
-    // API Transaksi
-    Route::post('/transactions', [TransactionController::class, 'store']);
+    // Ganti baris post manual jadi apiResource biar lengkap
+    Route::apiResource('transactions', TransactionController::class);
     Route::patch('/transactions/{transaction}/status', [TransactionController::class, 'updateStatus']);
     
     // API Mobile Customer

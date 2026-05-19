@@ -24,21 +24,20 @@ class CustomerController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
             'phone' => 'required|numeric',
-            'address' => 'required|string'
+            'address' => 'required|string',
+            'password' => 'required|min:6' // Validasi password baru
         ]);
 
         try {
             DB::beginTransaction();
 
-            // 1. Buat Akun User secara otomatis (Jebakan Batman Solved)
             $user = User::create([
                 'name' => $request->name,
                 'email' => $request->email,
-                'password' => Hash::make('laundry123'), // Password default
+                'password' => Hash::make($request->password), // Pake password dari input React
                 'role' => 'customer'
             ]);
 
-            // 2. Buat Profil Customer dengan ID User yang baru dibuat
             $customer = Customer::create([
                 'user_id' => $user->id,
                 'phone' => $request->phone,
@@ -49,10 +48,9 @@ class CustomerController extends Controller
 
             return response()->json([
                 'success' => true, 
-                'message' => 'Pelanggan berhasil ditambahkan. Password default: laundry123',
+                'message' => 'Pelanggan berhasil ditambahkan.',
                 'data' => $customer->load('user')
             ], 201);
-
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json(['success' => false, 'message' => 'Gagal menambahkan pelanggan', 'error' => $e->getMessage()], 500);

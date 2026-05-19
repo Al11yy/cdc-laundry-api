@@ -8,13 +8,12 @@ class Service extends Model
 {
     protected $fillable = [
         'service_name', 
+        'description', 
         'price', 
         'unit', 
-        'is_active'
+        'is_active', 
+        'service_photo'
     ];
 
-    public function transactions()
-    {
-        return $this->hasMany(Transaction::class);
-    }
+    public function transactions() { return $this->hasMany(Transaction::class); }
 }

@@ -18,13 +18,18 @@ class ServiceController extends Controller
     {
         $validated = $request->validate([
             'service_name' => 'required|string|max:255',
+            'description' => 'nullable|string',
             'price' => 'required|numeric|min:0',
             'unit' => 'required|string|max:20',
-            'is_active' => 'boolean'
+            'is_active' => 'boolean',
+            'service_photo' => 'nullable|image|mimes:jpg,jpeg,png|max:25000' // Maks 25MB biar bisa upload foto layanan yang lebih besar
         ]);
 
-        $service = Service::create($validated);
+        if ($request->hasFile('service_photo')) {
+            $validated['service_photo'] = $request->file('service_photo')->store('services', 'public');
+        }
 
+        $service = Service::create($validated);
         return response()->json(['success' => true, 'message' => 'Layanan berhasil ditambahkan', 'data' => $service], 201);
     }
 
@@ -49,6 +54,11 @@ class ServiceController extends Controller
 
     public function destroy(Service $service)
     {
+        // Cek apakah layanan ini udah pernah dipake di transaksi
+        if ($service->transactions()->count() > 0) {
+            return response()->json(['success' => false, 'message' => 'Layanan ini tidak bisa dihapus karena sudah memiliki transaksi!'], 400);
+        }
+        
         $service->delete();
         return response()->json(['success' => true, 'message' => 'Layanan berhasil dihapus']);
     }

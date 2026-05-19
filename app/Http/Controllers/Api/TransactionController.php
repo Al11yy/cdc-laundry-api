@@ -10,42 +10,39 @@ use Illuminate\Support\Facades\Auth;
 
 class TransactionController extends Controller
 {
-    // 1. API Create Transaction (Untuk Web Admin)
+    // 1. Tampil Semua Transaksi (Buat Web Admin)
+    public function index()
+    {
+        $transactions = Transaction::with(['customer.user', 'service', 'admin'])->latest()->get();
+        return response()->json(['success' => true, 'data' => $transactions]);
+    }
+
+    // 2. Simpan Transaksi Baru
     public function store(Request $request)
     {
-        // Validasi input
         $request->validate([
             'customer_id' => 'required|exists:customers,id',
             'service_id' => 'required|exists:services,id',
             'weight' => 'required|numeric|min:0.1',
             'payment_method' => 'required|in:cash,transfer',
-            'payment_proof' => 'nullable|image|mimes:jpg,jpeg,png|max:2048'
+            // Pastikan gambar di bawah 2MB biar gak ditolak Laravel
+            'clothes_photo' => 'nullable|image|mimes:jpg,jpeg,png|max:25000' 
         ]);
 
-        // Ambil harga layanan untuk dihitung dengan berat
         $service = Service::findOrFail($request->service_id);
         $totalPrice = $service->price * $request->weight;
-
-        // Auto-Generate Invoice Code
         $invoiceCode = 'LND-' . date('Ymd') . '-' . rand(1000, 9999);
+        
+        $paymentStatus = $request->payment_method === 'cash' ? 'paid' : 'pending';
+        $paidAt = $request->payment_method === 'cash' ? now() : null;
 
-        // Handle Logika Pembayaran
-        $paymentStatus = 'pending';
-        $paidAt = null;
-        $paymentProofPath = null;
-
-        if ($request->payment_method === 'cash') {
-            $paymentStatus = 'paid';
-            $paidAt = now();
-        } elseif ($request->payment_method === 'transfer' && $request->hasFile('payment_proof')) {
-            // Upload gambar pakai Laravel Storage
-            $paymentProofPath = $request->file('payment_proof')->store('receipts', 'public');
+        $clothesPhotoPath = null;
+        if ($request->hasFile('clothes_photo')) {
+            $clothesPhotoPath = $request->file('clothes_photo')->store('transactions_clothes', 'public');
         }
 
-        // Simpan ke database
         $transaction = Transaction::create([
             'invoice_code' => $invoiceCode,
-            // Pakai Auth::id() biar VS Code nggak merah
             'admin_id' => Auth::id(), 
             'customer_id' => $request->customer_id,
             'service_id' => $request->service_id,
@@ -54,57 +51,45 @@ class TransactionController extends Controller
             'status' => 'antrian',
             'payment_method' => $request->payment_method,
             'payment_status' => $paymentStatus,
-            'payment_proof' => $paymentProofPath,
+            'clothes_photo' => $clothesPhotoPath,
             'paid_at' => $paidAt,
         ]);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Transaksi berhasil dibuat',
-            'data' => $transaction
-        ], 201);
+        return response()->json(['success' => true, 'message' => 'Transaksi berhasil dibuat', 'data' => $transaction], 201);
     }
 
-    // 2. API Update Status Cucian (Untuk Web Admin)
+    // 3. Update Status (Buat Nanti)
     public function updateStatus(Request $request, Transaction $transaction)
     {
         $request->validate([
             'status' => 'required|in:antrian,dicuci,disetrika,siap diambil,diambil'
         ]);
-
         $transaction->update(['status' => $request->status]);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Status cucian berhasil diperbarui',
-            'data' => $transaction
-        ]);
+        return response()->json(['success' => true, 'message' => 'Status cucian berhasil diperbarui', 'data' => $transaction]);
     }
 
-    // 3. API Cek Status Laundry (Khusus Untuk Mobile App Customer)
+    // 4. Hapus Transaksi
+    public function destroy(Transaction $transaction)
+    {
+        $transaction->delete();
+        return response()->json(['success' => true, 'message' => 'Transaksi berhasil dihapus']);
+    }
+
+    // 5. Cek Status (Khusus Mobile App)
     public function customerStatus()
     {
-        /** @var \App\Models\User $user */
-        // Pakai Auth::user() biar VS Code nggak merah
         $user = Auth::user();
-
-        // Keamanan ekstra: Pastikan yang login beneran customer
         if ($user->role !== 'customer') {
             return response()->json(['success' => false, 'message' => 'Akses ditolak'], 403);
         }
 
-        // Cari ID Customer yang berelasi dengan User login
         $customerId = $user->customer->id;
-
-        // Tarik data transaksi milik customer tersebut beserta detail layanannya 
         $transactions = Transaction::with('service')
                             ->where('customer_id', $customerId)
                             ->orderBy('created_at', 'desc')
                             ->get();
 
-        return response()->json([
-            'success' => true,
-            'data' => $transactions
-        ]);
+        return response()->json(['success' => true, 'data' => $transactions]);
     }
 }

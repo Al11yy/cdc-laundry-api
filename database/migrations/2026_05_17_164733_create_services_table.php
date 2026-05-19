@@ -16,6 +16,8 @@ return new class extends Migration
             $table->string('service_name'); 
             $table->decimal('price', 10, 2); 
             $table->string('unit', 20); 
+            $table->text('description')->nullable(); // Deskripsi layanan
+            $table->string('service_photo')->nullable(); // Foto layanan
             $table->boolean('is_active')->default(true); 
             $table->timestamps();
         });
