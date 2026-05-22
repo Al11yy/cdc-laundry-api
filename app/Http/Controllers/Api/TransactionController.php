@@ -7,17 +7,16 @@ use App\Models\Transaction;
 use App\Models\Service;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage; // KUNCI UTAMA AMAN ERROR 500
 
 class TransactionController extends Controller
 {
-    // 1. Tampil Semua Transaksi (Buat Web Admin)
     public function index()
     {
         $transactions = Transaction::with(['customer.user', 'service', 'admin'])->latest()->get();
         return response()->json(['success' => true, 'data' => $transactions]);
     }
 
-    // 2. Simpan Transaksi Baru
     public function store(Request $request)
     {
         $request->validate([
@@ -25,9 +24,13 @@ class TransactionController extends Controller
             'service_id' => 'required|exists:services,id',
             'weight' => 'required|numeric|min:0.1',
             'payment_method' => 'required|in:cash,transfer',
-            // Pastikan gambar di bawah 2MB biar gak ditolak Laravel
-            'clothes_photo' => 'nullable|image|mimes:jpg,jpeg,png|max:25000' 
+            'clothes_photo' => 'nullable|image|mimes:jpg,jpeg,png|max:5000' 
         ]);
+
+        // Proteksi Sesi Token Gantung
+        if (!Auth::check()) {
+            return response()->json(['success' => false, 'message' => 'Sesi login admin habis. Silakan logout lalu login kembali!'], 401);
+        }
 
         $service = Service::findOrFail($request->service_id);
         $totalPrice = $service->price * $request->weight;
@@ -58,25 +61,56 @@ class TransactionController extends Controller
         return response()->json(['success' => true, 'message' => 'Transaksi berhasil dibuat', 'data' => $transaction], 201);
     }
 
-    // 3. Update Status (Buat Nanti)
-    public function updateStatus(Request $request, Transaction $transaction)
+    public function update(Request $request, Transaction $transaction)
     {
         $request->validate([
-            'status' => 'required|in:antrian,dicuci,disetrika,siap diambil,diambil'
+            'customer_id' => 'sometimes|required|exists:customers,id',
+            'service_id' => 'sometimes|required|exists:services,id',
+            'weight' => 'sometimes|required|numeric|min:0.1',
+            'payment_method' => 'sometimes|required|in:cash,transfer',
+            'clothes_photo' => 'nullable|image|mimes:jpg,jpeg,png|max:5000' 
         ]);
-        $transaction->update(['status' => $request->status]);
 
-        return response()->json(['success' => true, 'message' => 'Status cucian berhasil diperbarui', 'data' => $transaction]);
+        $data = $request->only(['customer_id', 'service_id', 'weight', 'payment_method']);
+
+        $serviceId = $request->input('service_id', $transaction->service_id);
+        $weight = $request->input('weight', $transaction->weight);
+        
+        $service = Service::findOrFail($serviceId);
+        $data['total_price'] = $service->price * $weight;
+
+        if ($request->hasFile('clothes_photo')) {
+            if ($transaction->clothes_photo && Storage::disk('public')->exists($transaction->clothes_photo)) {
+                Storage::disk('public')->delete($transaction->clothes_photo);
+            }
+            $data['clothes_photo'] = $request->file('clothes_photo')->store('transactions_clothes', 'public');
+        }
+
+        $transaction->update($data);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Data transaksi berhasil diperbarui',
+            'data' => $transaction->load(['customer.user', 'service'])
+        ]);
     }
 
-    // 4. Hapus Transaksi
+    public function updateStatus(Request $request, Transaction $transaction)
+    {
+        $request->validate(['status' => 'required|in:antrian,dicuci,disetrika,siap diambil,diambil']);
+        $transaction->update(['status' => $request->status]);
+        return response()->json(['success' => true, 'message' => 'Status berhasil diubah']);
+    }
+
     public function destroy(Transaction $transaction)
     {
+        if ($transaction->clothes_photo && Storage::disk('public')->exists($transaction->clothes_photo)) {
+            Storage::disk('public')->delete($transaction->clothes_photo);
+        }
         $transaction->delete();
         return response()->json(['success' => true, 'message' => 'Transaksi berhasil dihapus']);
     }
 
-    // 5. Cek Status (Khusus Mobile App)
     public function customerStatus()
     {
         $user = Auth::user();

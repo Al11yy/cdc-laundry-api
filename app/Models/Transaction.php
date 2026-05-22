@@ -6,10 +6,20 @@ use Illuminate\Database\Eloquent\Model;
 
 class Transaction extends Model
 {
+    // WAJIB pastikan admin_id dan clothes_photo ada di dalam array ini cui!
     protected $fillable = [
-        'invoice_code', 'admin_id', 'customer_id', 'service_id', 'weight',
-        'total_price', 'status', 'payment_method', 'payment_status',
-        'payment_proof', 'clothes_photo', 'paid_at'
+        'invoice_code',
+        'admin_id', 
+        'customer_id',
+        'service_id',
+        'weight',
+        'total_price',
+        'status',
+        'payment_method',
+        'payment_status',
+        'payment_proof',
+        'clothes_photo', 
+        'paid_at'
     ];
 
     public function admin() { return $this->belongsTo(User::class, 'admin_id'); }
