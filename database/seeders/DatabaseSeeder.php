@@ -19,13 +19,14 @@ class DatabaseSeeder extends Seeder
             'role' => 'admin',
         ]);
 
-        // 2. Buat Data Services (Layanan Laundry) 
+        // 2. Buat Data Services (Layanan Laundry + Foto Brosur) 
         Service::insert([
             [
                 'service_name' => 'Cuci Kiloan Reguler',
                 'price' => 7000.00,
                 'unit' => 'Kg',
                 'is_active' => true,
+                'service_photo' => 'services/kiloan.jpg', // Jalur file di storage
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
@@ -34,6 +35,7 @@ class DatabaseSeeder extends Seeder
                 'price' => 25000.00,
                 'unit' => 'Pcs',
                 'is_active' => true,
+                'service_photo' => 'services/selimut.jpg', // Jalur file di storage
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
@@ -42,6 +44,7 @@ class DatabaseSeeder extends Seeder
                 'price' => 5000.00,
                 'unit' => 'Kg',
                 'is_active' => true,
+                'service_photo' => 'services/setrika.jpg', // Jalur file di storage
                 'created_at' => now(),
                 'updated_at' => now(),
             ]
