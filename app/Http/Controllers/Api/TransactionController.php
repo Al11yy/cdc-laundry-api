@@ -68,16 +68,21 @@ class TransactionController extends Controller
             'service_id' => 'sometimes|required|exists:services,id',
             'weight' => 'sometimes|required|numeric|min:0.1',
             'payment_method' => 'sometimes|required|in:cash,transfer',
+            'payment_status' => 'sometimes|required|in:pending,paid',
             'clothes_photo' => 'nullable|image|mimes:jpg,jpeg,png|max:5000' 
         ]);
 
-        $data = $request->only(['customer_id', 'service_id', 'weight', 'payment_method']);
+        $data = $request->only(['customer_id', 'service_id', 'weight', 'payment_method', 'payment_status']);
 
         $serviceId = $request->input('service_id', $transaction->service_id);
         $weight = $request->input('weight', $transaction->weight);
         
         $service = Service::findOrFail($serviceId);
         $data['total_price'] = $service->price * $weight;
+
+        if ($request->has('payment_status')) {
+            $data['paid_at'] = $request->payment_status === 'paid' ? now() : null;
+        }
 
         if ($request->hasFile('clothes_photo')) {
             if ($transaction->clothes_photo && Storage::disk('public')->exists($transaction->clothes_photo)) {
@@ -100,6 +105,21 @@ class TransactionController extends Controller
         $request->validate(['status' => 'required|in:antrian,dicuci,disetrika,siap diambil,diambil']);
         $transaction->update(['status' => $request->status]);
         return response()->json(['success' => true, 'message' => 'Status berhasil diubah']);
+    }
+
+    public function updatePaymentStatus(Request $request, Transaction $transaction)
+    {
+        $request->validate(['payment_status' => 'required|in:pending,paid']);
+        
+        $data = ['payment_status' => $request->payment_status];
+        if ($request->payment_status === 'paid') {
+            $data['paid_at'] = now();
+        } else {
+            $data['paid_at'] = null;
+        }
+        
+        $transaction->update($data);
+        return response()->json(['success' => true, 'message' => 'Status pembayaran berhasil diubah']);
     }
 
     public function destroy(Transaction $transaction)

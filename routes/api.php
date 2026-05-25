@@ -20,6 +20,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Ganti baris post manual jadi apiResource biar lengkap
     Route::apiResource('transactions', TransactionController::class);
     Route::patch('/transactions/{transaction}/status', [TransactionController::class, 'updateStatus']);
+    Route::patch('/transactions/{transaction}/payment-status', [TransactionController::class, 'updatePaymentStatus']);
     
     // API Mobile Customer
     Route::get('/status-laundry', [TransactionController::class, 'customerStatus']);

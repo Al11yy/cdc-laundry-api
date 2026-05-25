@@ -68,15 +68,20 @@ class CustomerController extends Controller
             'name' => 'sometimes|required|string|max:255',
             'email' => 'sometimes|required|email|unique:users,email,' . $customer->user_id,
             'phone' => 'sometimes|required|numeric',
-            'address' => 'sometimes|required|string'
+            'address' => 'sometimes|required|string',
+            'password' => 'nullable|min:6'
         ]);
 
         try {
             DB::beginTransaction();
 
-            // Update nama dan email di tabel users jika dikirim
-            if ($request->has('name') || $request->has('email')) {
-                $customer->user->update($request->only(['name', 'email']));
+            // Update nama, email, dan password di tabel users jika dikirim
+            $userData = $request->only(['name', 'email']);
+            if ($request->filled('password')) {
+                $userData['password'] = Hash::make($request->password);
+            }
+            if (!empty($userData)) {
+                $customer->user->update($userData);
             }
 
             // Update phone dan address di tabel customers
