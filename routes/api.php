@@ -12,6 +12,7 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/profile', [AuthController::class, 'profile']);
+    Route::put('/profile/update', [AuthController::class, 'updateProfile']);
     
     // CRUD Master Data
     Route::apiResource('services', ServiceController::class);

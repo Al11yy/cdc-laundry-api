@@ -50,12 +50,48 @@ class AuthController extends Controller
         ]);
     }
     
-    // API Profile untuk mengambil data user yang login [cite: 64]
+    // API Profile untuk mengambil data user yang login
     public function profile(Request $request)
     {
         return response()->json([
             'success' => true,
-            'data' => $request->user()
+            'data' => $request->user()->load('customer')
+        ]);
+    }
+
+    // API Update Profile untuk memperbarui nama, phone, dan address
+    public function updateProfile(Request $request)
+    {
+        $user = $request->user();
+
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'phone' => 'required|string|max:15',
+            'address' => 'required|string',
+        ]);
+
+        // Update nama user
+        $user->update([
+            'name' => $request->name,
+        ]);
+
+        // Update detail customer
+        if ($user->customer) {
+            $user->customer->update([
+                'phone' => $request->phone,
+                'address' => $request->address,
+            ]);
+        } else {
+            $user->customer()->create([
+                'phone' => $request->phone,
+                'address' => $request->address,
+            ]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Profil berhasil diperbarui.',
+            'data' => $user->load('customer')
         ]);
     }
 }
